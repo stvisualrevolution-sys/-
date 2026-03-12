@@ -34,6 +34,12 @@ JWT取得後、`Authorization: Bearer <token>` で以下APIを利用。
 ### `POST /v1/analyze`
 運行イベントから法令判定を返します。
 
+### `GET /v1/kpi/summary`
+直近30日のSAFE/WARNING/VIOLATION比率など、経営KPIを返します。
+
+### `GET /v1/audit/chain`
+監査証跡のハッシュチェーン（改ざん検知用途）を返します。
+
 #### 入力例
 ```json
 {

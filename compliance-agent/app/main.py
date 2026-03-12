@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from .api_models import (
     SignupRequest,
     TokenResponse,
 )
+from .audit import append_audit_event
 from .auth import (
     create_access_token,
     get_current_context,
@@ -34,7 +36,7 @@ from .models import (
     NotifyRequest,
     NotifyResponse,
 )
-from .orm import AnalysisLog, Membership, NotificationLog, Tenant, User
+from .orm import AnalysisLog, AuditEvent, Membership, NotificationLog, Tenant, User
 from .reporting import build_monthly_report
 from .rules import analyze
 
@@ -101,6 +103,11 @@ def analyze_endpoint(req: AnalyzeAndNotifyRequest, ctx=Depends(get_current_conte
         evidence_json=json.dumps(result.evidence, ensure_ascii=False),
     )
     db.add(row)
+    append_audit_event(db, ctx["tenant_id"], "analysis.created", {
+        "driver_name": result.driver_name,
+        "status": result.status,
+        "violation_type": result.violation_type,
+    })
     db.commit()
     return result
 
@@ -138,6 +145,12 @@ def notify_endpoint(req: NotifyRequest, ctx=Depends(require_manager_or_owner), d
     db.add(NotificationLog(tenant_id=ctx["tenant_id"], analysis_id=fake_analysis.id, target_type="driver", message=msg.driver_message))
     if msg.owner_message:
         db.add(NotificationLog(tenant_id=ctx["tenant_id"], analysis_id=fake_analysis.id, target_type="owner", message=msg.owner_message))
+
+    append_audit_event(db, ctx["tenant_id"], "notification.created", {
+        "driver_name": req.analysis_result.driver_name,
+        "status": req.analysis_result.status,
+        "owner_message": bool(msg.owner_message),
+    })
     db.commit()
 
     _try_send_owner_email(msg.owner_message)
@@ -164,6 +177,12 @@ def analyze_and_notify(req: AnalyzeAndNotifyRequest, ctx=Depends(get_current_con
     db.add(NotificationLog(tenant_id=ctx["tenant_id"], analysis_id=row.id, target_type="driver", message=msg.driver_message))
     if msg.owner_message:
         db.add(NotificationLog(tenant_id=ctx["tenant_id"], analysis_id=row.id, target_type="owner", message=msg.owner_message))
+
+    append_audit_event(db, ctx["tenant_id"], "analysis_and_notify.completed", {
+        "driver_name": result.driver_name,
+        "status": result.status,
+        "owner_message": bool(msg.owner_message),
+    })
     db.commit()
 
     _try_send_owner_email(msg.owner_message)
@@ -209,6 +228,11 @@ async def ingest_csv(
         except Exception:
             continue
 
+    append_audit_event(db, ctx["tenant_id"], "ingest.csv", {
+        "imported_rows": imported,
+        "analyses_created": created,
+        "filename": file.filename,
+    })
     db.commit()
     return IngestCsvResponse(imported_rows=imported, analyses_created=created)
 
@@ -229,6 +253,62 @@ def list_analyses(limit: int = 50, ctx=Depends(get_current_context), db: Session
             "status": r.status,
             "violation_type": r.violation_type,
             "details": r.details,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
+
+
+@app.get("/v1/kpi/summary")
+def kpi_summary(ctx=Depends(get_current_context), db: Session = Depends(get_db)):
+    tenant_id = ctx["tenant_id"]
+    since = datetime.now(timezone.utc) - timedelta(days=30)
+
+    all_rows = db.query(AnalysisLog).filter(AnalysisLog.tenant_id == tenant_id).all()
+    month_rows = [r for r in all_rows if r.created_at and r.created_at.replace(tzinfo=timezone.utc) >= since]
+
+    def _count(rows, status):
+        return sum(1 for r in rows if r.status == status)
+
+    total = len(month_rows)
+    safe = _count(month_rows, "SAFE")
+    warning = _count(month_rows, "WARNING")
+    violation = _count(month_rows, "VIOLATION")
+
+    notification_count = (
+        db.query(NotificationLog)
+        .filter(NotificationLog.tenant_id == tenant_id)
+        .count()
+    )
+    audit_count = db.query(AuditEvent).filter(AuditEvent.tenant_id == tenant_id).count()
+
+    return {
+        "window": "last_30_days",
+        "analysis_total": total,
+        "safe": safe,
+        "warning": warning,
+        "violation": violation,
+        "compliance_rate": round((safe / total * 100), 2) if total else 0.0,
+        "notification_total_all_time": notification_count,
+        "audit_events_all_time": audit_count,
+    }
+
+
+@app.get("/v1/audit/chain")
+def audit_chain(limit: int = 50, ctx=Depends(require_manager_or_owner), db: Session = Depends(get_db)):
+    rows = (
+        db.query(AuditEvent)
+        .filter(AuditEvent.tenant_id == ctx["tenant_id"])
+        .order_by(AuditEvent.created_at.desc())
+        .limit(max(1, min(limit, 200)))
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "event_type": r.event_type,
+            "prev_hash": r.prev_hash,
+            "event_hash": r.event_hash,
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
         for r in rows
