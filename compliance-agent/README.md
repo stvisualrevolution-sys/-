@@ -19,7 +19,13 @@ uvicorn app.main:app --reload --port 8088
 
 ## 2. API
 
-### `POST /analyze`
+### 認証
+- `POST /v1/auth/signup`
+- `POST /v1/auth/login`
+
+JWT取得後、`Authorization: Bearer <token>` で以下APIを利用。
+
+### `POST /v1/analyze`
 運行イベントから法令判定を返します。
 
 #### 入力例
