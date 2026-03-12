@@ -63,3 +63,10 @@ class ApprovalApproveRequest(BaseModel):
 
 class ApprovalExecuteRequest(BaseModel):
     approval_id: str
+
+
+class ApprovalRequestAndSendResponse(BaseModel):
+    approval_id: str
+    action: str
+    expires_at: str
+    sent_to_telegram: bool

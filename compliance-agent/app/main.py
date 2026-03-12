@@ -6,7 +6,9 @@ from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+import os
+
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
@@ -16,6 +18,7 @@ from .api_models import (
     ApprovalCreateRequest,
     ApprovalCreateResponse,
     ApprovalExecuteRequest,
+    ApprovalRequestAndSendResponse,
     BillingCheckoutRequest,
     BillingCheckoutResponse,
     IngestCsvResponse,
@@ -23,6 +26,7 @@ from .api_models import (
     SignupRequest,
     TokenResponse,
 )
+from .approval_links import sign as sign_approval_link, verify as verify_approval_link
 from .approvals import create_approval_request, approve_request, execute_approved_action
 from .audit import append_audit_event
 from .billing import create_checkout_session, get_billing_config
@@ -38,6 +42,7 @@ from .emailer import EmailConfigError, send_email
 from .messaging import build_messages
 from .pdf_report import build_signed_report_pdf
 from .settings import owner_email_default
+from .telegram_notify import send_approval_buttons
 from .models import (
     AnalysisResult,
     MonthlyReportRequest,
@@ -118,6 +123,84 @@ def approvals_request(req: ApprovalCreateRequest, ctx=Depends(require_manager_or
         expires_at=row.expires_at.isoformat(),
         approval_code=code,
     )
+
+
+@app.post("/v1/approvals/request-and-send", response_model=ApprovalRequestAndSendResponse)
+def approvals_request_and_send(req: ApprovalCreateRequest, ctx=Depends(require_manager_or_owner), db: Session = Depends(get_db)):
+    row, code = create_approval_request(
+        db,
+        tenant_id=ctx["tenant_id"],
+        user_id=ctx["user"].id,
+        action=req.action,
+        payload=req.payload,
+        ttl_minutes=req.ttl_minutes,
+    )
+
+    base_url = os.getenv("PUBLIC_BASE_URL", "http://localhost:8088")
+    approve_token = sign_approval_link(row.id, code, "approve_execute")
+    reject_token = sign_approval_link(row.id, code, "reject")
+    approve_url = f"{base_url}/v1/approvals/quick?action=approve_execute&approval_id={row.id}&code={code}&token={approve_token}"
+    reject_url = f"{base_url}/v1/approvals/quick?action=reject&approval_id={row.id}&code={code}&token={reject_token}"
+
+    sent = send_approval_buttons(
+        message=f"承認リクエスト: {row.action}\nID: {row.id}\n有効期限: {row.expires_at.isoformat()}",
+        approve_url=approve_url,
+        reject_url=reject_url,
+    )
+
+    append_audit_event(db, ctx["tenant_id"], "approval.requested", {
+        "approval_id": row.id,
+        "action": req.action,
+        "sent_to_telegram": bool(sent),
+    })
+    db.commit()
+
+    return ApprovalRequestAndSendResponse(
+        approval_id=row.id,
+        action=row.action,
+        expires_at=row.expires_at.isoformat(),
+        sent_to_telegram=bool(sent),
+    )
+
+
+@app.get("/v1/approvals/quick", response_class=HTMLResponse)
+def approvals_quick(
+    action: str = Query(..., pattern="^(approve_execute|reject)$"),
+    approval_id: str = Query(...),
+    code: str = Query(...),
+    token: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    if not verify_approval_link(approval_id, code, action, token):
+        return HTMLResponse("<h3>Invalid approval link</h3>", status_code=403)
+
+    row = db.query(ApprovalRequest).filter(ApprovalRequest.id == approval_id).first()
+    if not row:
+        return HTMLResponse("<h3>Approval request not found</h3>", status_code=404)
+
+    if action == "reject":
+        row.status = "rejected"
+        append_audit_event(db, row.tenant_id, "approval.rejected", {"approval_id": row.id, "via": "quick_link"})
+        db.commit()
+        return HTMLResponse("<h3>却下しました。</h3>", status_code=200)
+
+    try:
+        approve_request(db, row, approver_user_id=row.requested_by_user_id, code=code)
+        result = execute_approved_action(db, row)
+    except ValueError as e:
+        return HTMLResponse(f"<h3>承認失敗: {str(e)}</h3>", status_code=400)
+
+    append_audit_event(db, row.tenant_id, "approval.executed", {
+        "approval_id": row.id,
+        "action": row.action,
+        "via": "quick_link",
+        "returncode": result["returncode"],
+    })
+    db.commit()
+
+    if result["returncode"] == 0:
+        return HTMLResponse("<h3>承認して実行しました ✅</h3>", status_code=200)
+    return HTMLResponse("<h3>承認したが実行でエラーが発生しました。</h3>", status_code=500)
 
 
 @app.post("/v1/approvals/approve")

@@ -43,6 +43,12 @@ JWT取得後、`Authorization: Bearer <token>` で以下APIを利用。
 ### `POST /v1/approvals/request`
 高リスク操作（例: git push / alembic migration）の承認リクエストを作成します。
 
+### `POST /v1/approvals/request-and-send`
+承認リクエストを作成し、Telegramへワンタップ承認ボタンを送ります（iPhone向け）。
+
+### `GET /v1/approvals/quick`
+Telegramボタンから呼ばれるワンタップ承認/却下エンドポイント。
+
 ### `POST /v1/approvals/approve`
 オーナーが承認コードで承認します（ワンタイム）。
 
