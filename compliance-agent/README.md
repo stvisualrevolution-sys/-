@@ -14,6 +14,10 @@ cd compliance-agent
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+
+# 初回マイグレーション
+alembic upgrade head
+
 uvicorn app.main:app --reload --port 8088
 ```
 
@@ -66,7 +70,19 @@ JWT取得後、`Authorization: Bearer <token>` で以下APIを利用。
 - `prompts/notification_prompt.md`
 - `prompts/monthly_report_prompt.md`
 
-## 5. 本番化ロードマップ（推奨）
+## 5. メール通知（任意）
+
+`OWNER_EMAIL` とSMTP環境変数を設定すると、WARNING/VIOLATION時に社長向け通知をメール送信します。
+
+- `OWNER_EMAIL`
+- `SMTP_HOST`
+- `SMTP_PORT`（デフォルト587）
+- `SMTP_FROM`
+- `SMTP_USERNAME`（任意）
+- `SMTP_PASSWORD`（任意）
+- `SMTP_USE_TLS`（デフォルトtrue）
+
+## 6. 本番化ロードマップ（推奨）
 
 1. デジタコAPI接続（メーカー別アダプタ）
 2. ルールエンジンをSQL永続化（PostgreSQL）

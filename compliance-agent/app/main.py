@@ -21,8 +21,10 @@ from .auth import (
     require_manager_or_owner,
     verify_password,
 )
-from .db import Base, engine, get_db
+from .db import get_db
+from .emailer import EmailConfigError, send_email
 from .messaging import build_messages
+from .settings import owner_email_default
 from .models import (
     AnalysisResult,
     MonthlyReportRequest,
@@ -34,8 +36,7 @@ from .orm import AnalysisLog, Membership, NotificationLog, Tenant, User
 from .reporting import build_monthly_report
 from .rules import analyze
 
-app = FastAPI(title="Compliance Agent MVP", version="0.2.0")
-Base.metadata.create_all(bind=engine)
+app = FastAPI(title="Compliance Agent MVP", version="0.3.0")
 
 
 @app.get("/health")
@@ -93,6 +94,20 @@ def analyze_endpoint(req: AnalyzeAndNotifyRequest, ctx=Depends(get_current_conte
     return result
 
 
+def _try_send_owner_email(owner_message: str | None):
+    if not owner_message:
+        return
+    to_email = owner_email_default()
+    if not to_email:
+        return
+    try:
+        send_email("【コンプライアンス通知】WARNING/VIOLATION検知", owner_message, to_email)
+    except EmailConfigError:
+        pass
+    except Exception:
+        pass
+
+
 @app.post("/v1/notify", response_model=NotifyResponse)
 def notify_endpoint(req: NotifyRequest, ctx=Depends(require_manager_or_owner), db: Session = Depends(get_db)):
     msg = build_messages(req.analysis_result)
@@ -113,6 +128,8 @@ def notify_endpoint(req: NotifyRequest, ctx=Depends(require_manager_or_owner), d
     if msg.owner_message:
         db.add(NotificationLog(tenant_id=ctx["tenant_id"], analysis_id=fake_analysis.id, target_type="owner", message=msg.owner_message))
     db.commit()
+
+    _try_send_owner_email(msg.owner_message)
     return msg
 
 
@@ -138,6 +155,7 @@ def analyze_and_notify(req: AnalyzeAndNotifyRequest, ctx=Depends(get_current_con
         db.add(NotificationLog(tenant_id=ctx["tenant_id"], analysis_id=row.id, target_type="owner", message=msg.owner_message))
     db.commit()
 
+    _try_send_owner_email(msg.owner_message)
     return {"analysis": result.model_dump(), "notification": msg.model_dump()}
 
 
