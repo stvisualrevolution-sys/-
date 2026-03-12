@@ -12,6 +12,10 @@ from sqlalchemy.orm import Session
 
 from .api_models import (
     AnalyzeAndNotifyRequest,
+    ApprovalApproveRequest,
+    ApprovalCreateRequest,
+    ApprovalCreateResponse,
+    ApprovalExecuteRequest,
     BillingCheckoutRequest,
     BillingCheckoutResponse,
     IngestCsvResponse,
@@ -19,6 +23,7 @@ from .api_models import (
     SignupRequest,
     TokenResponse,
 )
+from .approvals import create_approval_request, approve_request, execute_approved_action
 from .audit import append_audit_event
 from .billing import create_checkout_session, get_billing_config
 from .auth import (
@@ -40,7 +45,7 @@ from .models import (
     NotifyRequest,
     NotifyResponse,
 )
-from .orm import AnalysisLog, AuditEvent, Membership, NotificationLog, Subscription, Tenant, User
+from .orm import AnalysisLog, ApprovalRequest, AuditEvent, Membership, NotificationLog, Subscription, Tenant, User
 from .reporting import build_monthly_report
 from .rules import analyze
 
@@ -93,6 +98,73 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
     token = create_access_token(user.id, member.tenant_id, member.role)
     return TokenResponse(access_token=token, tenant_id=member.tenant_id, role=member.role)
+
+
+@app.post("/v1/approvals/request", response_model=ApprovalCreateResponse)
+def approvals_request(req: ApprovalCreateRequest, ctx=Depends(require_manager_or_owner), db: Session = Depends(get_db)):
+    row, code = create_approval_request(
+        db,
+        tenant_id=ctx["tenant_id"],
+        user_id=ctx["user"].id,
+        action=req.action,
+        payload=req.payload,
+        ttl_minutes=req.ttl_minutes,
+    )
+    append_audit_event(db, ctx["tenant_id"], "approval.requested", {"approval_id": row.id, "action": req.action})
+    db.commit()
+    return ApprovalCreateResponse(
+        approval_id=row.id,
+        action=row.action,
+        expires_at=row.expires_at.isoformat(),
+        approval_code=code,
+    )
+
+
+@app.post("/v1/approvals/approve")
+def approvals_approve(req: ApprovalApproveRequest, ctx=Depends(get_current_context), db: Session = Depends(get_db)):
+    if ctx["role"] != "owner":
+        raise HTTPException(status_code=403, detail="only owner can approve")
+
+    row = (
+        db.query(ApprovalRequest)
+        .filter(ApprovalRequest.id == req.approval_id, ApprovalRequest.tenant_id == ctx["tenant_id"])
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="approval request not found")
+
+    try:
+        approve_request(db, row, approver_user_id=ctx["user"].id, code=req.approval_code)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    append_audit_event(db, ctx["tenant_id"], "approval.approved", {"approval_id": row.id, "action": row.action})
+    db.commit()
+    return {"ok": True, "approval_id": row.id, "status": row.status}
+
+
+@app.post("/v1/approvals/execute")
+def approvals_execute(req: ApprovalExecuteRequest, ctx=Depends(require_manager_or_owner), db: Session = Depends(get_db)):
+    row = (
+        db.query(ApprovalRequest)
+        .filter(ApprovalRequest.id == req.approval_id, ApprovalRequest.tenant_id == ctx["tenant_id"])
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="approval request not found")
+
+    try:
+        result = execute_approved_action(db, row)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    append_audit_event(db, ctx["tenant_id"], "approval.executed", {
+        "approval_id": row.id,
+        "action": row.action,
+        "returncode": result["returncode"],
+    })
+    db.commit()
+    return result
 
 
 @app.post("/v1/analyze", response_model=AnalysisResult)

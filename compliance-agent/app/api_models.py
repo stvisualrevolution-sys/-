@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from .models import AnalyzeRequest
 
@@ -41,3 +41,25 @@ class BillingCheckoutRequest(BaseModel):
 
 class BillingCheckoutResponse(BaseModel):
     checkout_url: str
+
+
+class ApprovalCreateRequest(BaseModel):
+    action: str
+    payload: dict = Field(default_factory=dict)
+    ttl_minutes: int = 15
+
+
+class ApprovalCreateResponse(BaseModel):
+    approval_id: str
+    action: str
+    expires_at: str
+    approval_code: str
+
+
+class ApprovalApproveRequest(BaseModel):
+    approval_id: str
+    approval_code: str
+
+
+class ApprovalExecuteRequest(BaseModel):
+    approval_id: str

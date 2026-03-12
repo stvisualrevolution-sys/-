@@ -40,6 +40,15 @@ JWT取得後、`Authorization: Bearer <token>` で以下APIを利用。
 ### `GET /v1/audit/chain`
 監査証跡のハッシュチェーン（改ざん検知用途）を返します。
 
+### `POST /v1/approvals/request`
+高リスク操作（例: git push / alembic migration）の承認リクエストを作成します。
+
+### `POST /v1/approvals/approve`
+オーナーが承認コードで承認します（ワンタイム）。
+
+### `POST /v1/approvals/execute`
+承認済みリクエストを実行します（1回限り）。
+
 ### `POST /v1/billing/checkout`
 Stripe Checkout（サブスク）URLを発行します。
 
