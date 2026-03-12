@@ -8,3 +8,5 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.20
 email-validator==2.2.0
 alembic==1.16.4
+stripe==12.5.0
+reportlab==4.4.3

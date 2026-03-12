@@ -40,6 +40,15 @@ JWT取得後、`Authorization: Bearer <token>` で以下APIを利用。
 ### `GET /v1/audit/chain`
 監査証跡のハッシュチェーン（改ざん検知用途）を返します。
 
+### `POST /v1/billing/checkout`
+Stripe Checkout（サブスク）URLを発行します。
+
+### `POST /v1/billing/webhook`
+Stripe Webhook受信（サブスク状態更新）
+
+### `GET /v1/reports/monthly/pdf?month=YYYY-MM`
+SHA256付きの署名情報をヘッダに含む月次レポートPDFを返します。
+
 #### 入力例
 ```json
 {

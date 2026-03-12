@@ -31,3 +31,13 @@ class AnalyzeAndNotifyRequest(BaseModel):
 class IngestCsvResponse(BaseModel):
     imported_rows: int
     analyses_created: int
+
+
+class BillingCheckoutRequest(BaseModel):
+    price_id: str
+    success_url: str
+    cancel_url: str
+
+
+class BillingCheckoutResponse(BaseModel):
+    checkout_url: str
