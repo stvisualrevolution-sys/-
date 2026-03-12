@@ -3,8 +3,10 @@ from __future__ import annotations
 import csv
 import json
 from io import StringIO
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from .api_models import (
@@ -36,7 +38,16 @@ from .orm import AnalysisLog, Membership, NotificationLog, Tenant, User
 from .reporting import build_monthly_report
 from .rules import analyze
 
-app = FastAPI(title="Compliance Agent MVP", version="0.3.0")
+app = FastAPI(title="Compliance Agent MVP", version="0.4.0")
+WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+
+
+@app.get("/", response_class=HTMLResponse)
+def web_index():
+    index = WEB_DIR / "index.html"
+    if not index.exists():
+        return HTMLResponse("<h1>Compliance Agent</h1><p>web/index.html not found</p>", status_code=200)
+    return HTMLResponse(index.read_text(encoding="utf-8"), status_code=200)
 
 
 @app.get("/health")
@@ -200,6 +211,28 @@ async def ingest_csv(
 
     db.commit()
     return IngestCsvResponse(imported_rows=imported, analyses_created=created)
+
+
+@app.get("/v1/analyses")
+def list_analyses(limit: int = 50, ctx=Depends(get_current_context), db: Session = Depends(get_db)):
+    rows = (
+        db.query(AnalysisLog)
+        .filter(AnalysisLog.tenant_id == ctx["tenant_id"])
+        .order_by(AnalysisLog.created_at.desc())
+        .limit(max(1, min(limit, 200)))
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "driver_name": r.driver_name,
+            "status": r.status,
+            "violation_type": r.violation_type,
+            "details": r.details,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
 
 
 @app.post("/monthly-report", response_model=MonthlyReportResponse)

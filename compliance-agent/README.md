@@ -21,6 +21,8 @@ alembic upgrade head
 uvicorn app.main:app --reload --port 8088
 ```
 
+起動後、`http://localhost:8088/` に簡易Webコンソールがあります。
+
 ## 2. API
 
 ### 認証
@@ -82,7 +84,16 @@ JWT取得後、`Authorization: Bearer <token>` で以下APIを利用。
 - `SMTP_PASSWORD`（任意）
 - `SMTP_USE_TLS`（デフォルトtrue）
 
-## 6. 本番化ロードマップ（推奨）
+## 6. デプロイ（Render最短）
+
+このリポジトリには `Dockerfile` と `render.yaml` を同梱しています。
+
+1. GitHubにpush
+2. Renderで「Blueprint」作成（`render.yaml`を読み込み）
+3. 環境変数を設定（必要なら `OWNER_EMAIL`, `SMTP_*`）
+4. デプロイ後、`/health` で疎通確認
+
+## 7. 本番化ロードマップ（推奨）
 
 1. デジタコAPI接続（メーカー別アダプタ）
 2. ルールエンジンをSQL永続化（PostgreSQL）
