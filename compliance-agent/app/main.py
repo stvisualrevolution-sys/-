@@ -92,7 +92,28 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
 
 
 @app.post("/v1/auth/login", response_model=TokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+async def login(request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    email = form.get("email") or form.get("username")
+    password = form.get("password") or ""
+
+    if not email:
+        raise HTTPException(status_code=422, detail="email/username is required")
+
+    user = db.query(User).filter(User.email == str(email)).first()
+    if not user or not verify_password(str(password), user.password_hash):
+        raise HTTPException(status_code=401, detail="invalid email/password")
+
+    member = db.query(Membership).filter(Membership.user_id == user.id).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="no tenant membership")
+
+    token = create_access_token(user.id, member.tenant_id, member.role)
+    return TokenResponse(access_token=token, tenant_id=member.tenant_id, role=member.role)
+
+
+@app.post("/v1/auth/login-json", response_model=TokenResponse)
+def login_json(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == req.email).first()
     if not user or not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="invalid email/password")
