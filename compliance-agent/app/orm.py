@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Optional
 
-from sqlalchemy import String, ForeignKey, DateTime, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -21,7 +22,7 @@ class User(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
@@ -62,7 +63,7 @@ class AuditEvent(Base):
     tenant_id: Mapped[str] = mapped_column(String, ForeignKey("tenants.id"), nullable=False)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
-    prev_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    prev_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -71,11 +72,11 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     tenant_id: Mapped[str] = mapped_column(String, ForeignKey("tenants.id"), nullable=False)
-    stripe_customer_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    stripe_subscription_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     plan_code: Mapped[str] = mapped_column(String(64), default="starter")
     status: Mapped[str] = mapped_column(String(32), default="trialing")
-    current_period_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -89,8 +90,8 @@ class ApprovalRequest(Base):
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="pending")
-    approved_by_user_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)
-    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    approved_by_user_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from pydantic import BaseModel, EmailStr, Field
 
 from .models import AnalyzeRequest
@@ -8,7 +10,7 @@ from .models import AnalyzeRequest
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
-    display_name: str | None = None
+    display_name: Optional[str] = None
     tenant_name: str
 
 
