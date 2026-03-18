@@ -128,14 +128,17 @@ def login_json(req: LoginRequest, db: Session = Depends(get_db)):
 
 @app.post("/v1/approvals/request", response_model=ApprovalCreateResponse)
 def approvals_request(req: ApprovalCreateRequest, ctx=Depends(require_manager_or_owner), db: Session = Depends(get_db)):
-    row, code = create_approval_request(
-        db,
-        tenant_id=ctx["tenant_id"],
-        user_id=ctx["user"].id,
-        action=req.action,
-        payload=req.payload,
-        ttl_minutes=req.ttl_minutes,
-    )
+    try:
+        row, code = create_approval_request(
+            db,
+            tenant_id=ctx["tenant_id"],
+            user_id=ctx["user"].id,
+            action=req.action,
+            payload=req.payload,
+            ttl_minutes=req.ttl_minutes,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     append_audit_event(db, ctx["tenant_id"], "approval.requested", {"approval_id": row.id, "action": req.action})
     db.commit()
     return ApprovalCreateResponse(
@@ -148,14 +151,17 @@ def approvals_request(req: ApprovalCreateRequest, ctx=Depends(require_manager_or
 
 @app.post("/v1/approvals/request-and-send", response_model=ApprovalRequestAndSendResponse)
 def approvals_request_and_send(req: ApprovalCreateRequest, ctx=Depends(require_manager_or_owner), db: Session = Depends(get_db)):
-    row, code = create_approval_request(
-        db,
-        tenant_id=ctx["tenant_id"],
-        user_id=ctx["user"].id,
-        action=req.action,
-        payload=req.payload,
-        ttl_minutes=req.ttl_minutes,
-    )
+    try:
+        row, code = create_approval_request(
+            db,
+            tenant_id=ctx["tenant_id"],
+            user_id=ctx["user"].id,
+            action=req.action,
+            payload=req.payload,
+            ttl_minutes=req.ttl_minutes,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"unsupported action: use one of [git_push_main, alembic_upgrade]")
 
     base_url = os.getenv("PUBLIC_BASE_URL", "http://localhost:8088")
     approve_token = sign_approval_link(row.id, code, "approve_execute")
