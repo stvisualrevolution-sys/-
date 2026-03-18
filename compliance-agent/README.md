@@ -23,7 +23,14 @@ uvicorn app.main:app --reload --port 8088
 
 起動後、`http://localhost:8088/` に簡易Webコンソールがあります。
 
-## 2. LP / 販売導線
+## 2. macOS配布（警告を減らす）
+
+未署名配布ではGatekeeper警告が出ます。販売用途では署名+ノータライズを推奨。
+
+- 手順: `docs/MACOS_SIGNED_DISTRIBUTION.md`
+- スクリプト: `scripts/release_macos_signed.sh`
+
+## 3. LP / 販売導線
 
 - LP: `/landing`
 - Checkoutページ: `/landing/checkout.html`
