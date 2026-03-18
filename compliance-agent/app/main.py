@@ -10,7 +10,7 @@ from typing import List
 import os
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from sqlalchemy.orm import Session
 
 from .api_models import (
@@ -59,6 +59,7 @@ from .rules import analyze
 
 app = FastAPI(title="Compliance Agent MVP", version="0.4.0")
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+SAMPLES_DIR = Path(__file__).resolve().parent.parent / "samples"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -72,6 +73,14 @@ def web_index():
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/sample/ingest-template.csv")
+def sample_ingest_template():
+    p = SAMPLES_DIR / "ingest_template.csv"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="template not found")
+    return FileResponse(path=str(p), media_type="text/csv", filename="ingest_template.csv")
 
 
 @app.post("/v1/auth/signup", response_model=TokenResponse)
