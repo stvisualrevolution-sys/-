@@ -9,4 +9,11 @@
   <p><a class="btn" href="/download/drivecheck-local.zip">DriveCheck をダウンロード</a></p>
   <p><a href="/download/QUICKSTART.md" target="_blank">セットアップ手順（QUICKSTART）を見る</a></p>
 </div>
+<script>
+const p=new URLSearchParams(location.search);
+if(p.get('mock_checkout')==='1'){
+  document.getElementById('title').textContent='テスト購入完了（決済スキップ）✅';
+  document.getElementById('sub').textContent='いまはテストモードのため、決済なしでダウンロード導線を確認できます。';
+}
+</script>
 </body></html>

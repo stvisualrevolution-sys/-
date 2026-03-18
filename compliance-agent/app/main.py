@@ -676,6 +676,11 @@ def list_analyses(limit: int = 50, ctx=Depends(get_current_context), db: Session
 
 @app.post("/v1/public/create-checkout", response_model=BillingCheckoutResponse)
 def public_create_checkout(req: PublicCheckoutRequest):
+    # テスト段階: 決済をスキップして success ページへ遷移
+    if os.getenv("CHECKOUT_TEST_BYPASS", "false").lower() == "true":
+        sep = "&" if "?" in req.success_url else "?"
+        return BillingCheckoutResponse(checkout_url=f"{req.success_url}{sep}mock_checkout=1")
+
     one_time_price_id = os.getenv("STRIPE_ONE_TIME_PRICE_ID")
     if not one_time_price_id:
         raise HTTPException(status_code=500, detail="STRIPE_ONE_TIME_PRICE_ID is not configured")
