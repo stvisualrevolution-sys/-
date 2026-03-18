@@ -81,9 +81,28 @@
         <div class="card"><h3>✉️ 通知文生成</h3><p class="muted">ドライバー/管理者向け</p></div>
       </div>
       <div class="screens">
-        <div class="screen">CSV投入画面</div>
-        <div class="screen">判定結果一覧</div>
-        <div class="screen">通知文生成画面</div>
+        <div class="screen">
+          <strong style="display:block;margin-bottom:8px;color:var(--accent)">CSV投入画面</strong>
+          <div style="border:2px dashed rgba(0,212,170,.35);border-radius:8px;padding:14px;text-align:center;color:var(--text-dim)">
+            CSVファイルをドラッグ&ドロップ<br>またはクリックして選択
+          </div>
+        </div>
+        <div class="screen">
+          <strong style="display:block;margin-bottom:8px;color:var(--accent)">判定結果一覧</strong>
+          <div style="display:grid;gap:6px;font-size:12px">
+            <div style="padding:6px 8px;background:rgba(255,255,255,.04);border-radius:6px;display:flex;justify-content:space-between"><span>田中 太郎</span><span style="color:#00D4AA">SAFE</span></div>
+            <div style="padding:6px 8px;background:rgba(255,255,255,.04);border-radius:6px;display:flex;justify-content:space-between"><span>佐藤 健一</span><span style="color:#FFB020">WARNING</span></div>
+            <div style="padding:6px 8px;background:rgba(255,255,255,.04);border-radius:6px;display:flex;justify-content:space-between"><span>山田 次郎</span><span style="color:#FF4D6A">VIOLATION</span></div>
+          </div>
+        </div>
+        <div class="screen">
+          <strong style="display:block;margin-bottom:8px;color:var(--accent)">通知文生成画面</strong>
+          <div style="font-size:12px;color:var(--text-dim);background:rgba(255,255,255,.04);border-radius:8px;padding:10px;line-height:1.7">
+            山田次郎 様<br>
+            拘束時間が基準上限に接近しています。<br>
+            次の安全な停車地点で15分休憩してください。
+          </div>
+        </div>
       </div>
     </div>
   </section>
