@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
+from typing import List
 
 import os
 
@@ -21,6 +22,7 @@ from .api_models import (
     ApprovalRequestAndSendResponse,
     BillingCheckoutRequest,
     BillingCheckoutResponse,
+    IngestCsvError,
     IngestCsvResponse,
     LoginRequest,
     SignupRequest,
@@ -385,21 +387,44 @@ async def ingest_csv(
     content = (await file.read()).decode("utf-8")
     reader = csv.DictReader(StringIO(content))
 
+    required_cols = {
+        "driver_name",
+        "week_violation_over14h_count",
+        "last_shift_end",
+        "two_day_avg_driving_minutes",
+        "weekly_driving_minutes",
+        "events_json",
+    }
+    if not reader.fieldnames or not required_cols.issubset(set(reader.fieldnames)):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "CSV header is invalid",
+                "required_columns": sorted(list(required_cols)),
+                "received_columns": reader.fieldnames or [],
+            },
+        )
+
     imported = 0
     created = 0
-    for r in reader:
+    errors: List[IngestCsvError] = []
+
+    for idx, r in enumerate(reader, start=2):  # header is line 1
         imported += 1
         try:
             req = AnalyzeAndNotifyRequest(
                 analysis_input={
-                    "driver_name": r["driver_name"],
+                    "driver_name": (r.get("driver_name") or "").strip(),
                     "week_violation_over14h_count": int(r.get("week_violation_over14h_count", 0)),
                     "last_shift_end": r.get("last_shift_end") or None,
                     "two_day_avg_driving_minutes": int(r.get("two_day_avg_driving_minutes", 0)),
                     "weekly_driving_minutes": int(r.get("weekly_driving_minutes", 0)),
-                    "events": json.loads(r["events_json"]),
+                    "events": json.loads(r.get("events_json") or "[]"),
                 }
             )
+            if not req.analysis_input.driver_name:
+                raise ValueError("driver_name is empty")
+
             result = analyze(req.analysis_input)
             row = AnalysisLog(
                 tenant_id=ctx["tenant_id"],
@@ -412,16 +437,23 @@ async def ingest_csv(
             )
             db.add(row)
             created += 1
-        except Exception:
+        except Exception as e:
+            errors.append(IngestCsvError(row_number=idx, reason=str(e)))
             continue
 
     append_audit_event(db, ctx["tenant_id"], "ingest.csv", {
         "imported_rows": imported,
         "analyses_created": created,
+        "failed_rows": len(errors),
         "filename": file.filename,
     })
     db.commit()
-    return IngestCsvResponse(imported_rows=imported, analyses_created=created)
+    return IngestCsvResponse(
+        imported_rows=imported,
+        analyses_created=created,
+        failed_rows=len(errors),
+        errors=errors[:100],
+    )
 
 
 @app.get("/v1/analyses")

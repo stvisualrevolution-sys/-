@@ -30,9 +30,16 @@ class AnalyzeAndNotifyRequest(BaseModel):
     analysis_input: AnalyzeRequest
 
 
+class IngestCsvError(BaseModel):
+    row_number: int
+    reason: str
+
+
 class IngestCsvResponse(BaseModel):
     imported_rows: int
     analyses_created: int
+    failed_rows: int
+    errors: list[IngestCsvError] = Field(default_factory=list)
 
 
 class BillingCheckoutRequest(BaseModel):

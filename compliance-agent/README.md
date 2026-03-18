@@ -34,6 +34,11 @@ JWT取得後、`Authorization: Bearer <token>` で以下APIを利用。
 ### `POST /v1/analyze`
 運行イベントから法令判定を返します。
 
+### `POST /v1/ingest/csv`
+CSV一括取り込み。レスポンスに `failed_rows` と `errors`（行番号・理由）を返します。
+
+CSVテンプレート: `samples/ingest_template.csv`
+
 ### `GET /v1/kpi/summary`
 直近30日のSAFE/WARNING/VIOLATION比率など、経営KPIを返します。
 
