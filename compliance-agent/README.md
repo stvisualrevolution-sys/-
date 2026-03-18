@@ -23,7 +23,17 @@ uvicorn app.main:app --reload --port 8088
 
 起動後、`http://localhost:8088/` に簡易Webコンソールがあります。
 
-## 2. API
+## 2. LP / 販売導線
+
+- LP: `/landing`
+- Checkoutページ: `/landing/checkout.html`
+- 決済成功ページ: `/landing/success.html`
+- 販売ZIPダウンロード: `/download/drivecheck-local.zip`
+- QUICKSTART: `/download/QUICKSTART.md`
+
+`STRIPE_ONE_TIME_PRICE_ID` を設定すると、`/v1/public/create-checkout` から買い切り決済URLを発行できます。
+
+## 3. API
 
 ### 認証
 - `POST /v1/auth/signup`

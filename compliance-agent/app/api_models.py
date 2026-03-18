@@ -62,6 +62,12 @@ class BillingCheckoutResponse(BaseModel):
     checkout_url: str
 
 
+class PublicCheckoutRequest(BaseModel):
+    email: EmailStr
+    success_url: str
+    cancel_url: str
+
+
 class ApprovalCreateRequest(BaseModel):
     action: str
     payload: dict = Field(default_factory=dict)

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DriveCheck｜運送業の拘束時間・休息違反をCSVで即チェック</title>
+  <style>
+    :root {
+      --navy: #0B1426; --navy-light: #111D35; --accent: #00D4AA; --danger:#FF4D6A;
+      --text: #E8ECF4; --text-dim:#8892A8; --text-bright:#fff;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--navy);color:var(--text);line-height:1.8}
+    .container{max-width:1024px;margin:0 auto;padding:0 20px}
+    nav{position:sticky;top:0;background:rgba(11,20,38,.9);backdrop-filter:blur(8px);padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+    .nav-wrap{display:flex;justify-content:space-between;align-items:center}
+    .logo{font-weight:800;color:#fff;text-decoration:none}
+    .btn{display:inline-block;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700}
+    .btn-primary{background:var(--accent);color:#062015}
+    .btn-secondary{border:1px solid rgba(255,255,255,.2);color:#fff}
+    section{padding:72px 0}
+    h1{font-size:clamp(30px,5vw,52px);line-height:1.35;margin:14px 0}
+    h2{font-size:clamp(24px,4vw,36px);margin-bottom:14px}
+    .sub{color:var(--text-dim);max-width:680px}
+    .hero-badge{display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.3);font-size:12px}
+    .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:26px}
+    .card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:18px}
+    .card h3{font-size:16px;margin-bottom:8px}
+    .risk{margin-top:18px;padding:14px;border-radius:10px;background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.25)}
+    .screens{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:22px}
+    .screen{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;min-height:170px}
+    .price{font-size:46px;font-weight:800;margin:10px 0}
+    .muted{color:var(--text-dim);font-size:14px}
+    .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:18px}
+    .flow .card strong{display:block;color:var(--accent);margin-bottom:6px}
+    .faq .card{margin-bottom:8px}
+    footer{padding:34px 0;border-top:1px solid rgba(255,255,255,.08);color:var(--text-dim);font-size:12px}
+    .cta-box{text-align:center;padding:50px 0}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="container nav-wrap">
+      <a class="logo" href="#">DriveCheck</a>
+      <a class="btn btn-primary" href="/landing/checkout.html">今すぐ購入する</a>
+    </div>
+  </nav>
+
+  <section>
+    <div class="container">
+      <span class="hero-badge">🚛 2024年問題対応ツール</span>
+      <h1>運送業の拘束時間・休息違反を<br><span style="color:var(--accent)">CSVで即チェック</span></h1>
+      <p class="sub">買い切り98,000円。最短当日導入。監査対応の証跡まで、これ1つで完結します。</p>
+      <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn btn-primary" href="/landing/checkout.html">今すぐ購入する</a>
+        <a class="btn btn-secondary" href="#solution">デモを見る</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="problem" style="background:var(--navy-light)">
+    <div class="container">
+      <h2>こんな状態、続いていませんか？</h2>
+      <p class="sub">運行管理の現場で見て見ぬフリをしている課題、そのまま放置するとリスクが拡大します。</p>
+      <div class="grid3">
+        <div class="card"><h3>👤 誰が危ないか分からない</h3><p class="muted">拘束時間や休息期間の違反候補が見えない。</p></div>
+        <div class="card"><h3>📊 Excel管理が限界</h3><p class="muted">手作業では見落としと工数増が発生。</p></div>
+        <div class="card"><h3>🔥 監査前だけ混乱</h3><p class="muted">証跡が散らばり、直前対応になる。</p></div>
+      </div>
+      <div class="risk"><strong>⚠️ 放置すると</strong> 行政処分・車両停止リスク + 管理工数増加につながります。</div>
+    </div>
+  </section>
+
+  <section id="solution">
+    <div class="container">
+      <h2>DriveCheckでできること</h2>
+      <p class="sub">CSVをアップロードするだけ。違反検出から通知文生成まで自動化します。</p>
+      <div class="grid3">
+        <div class="card"><h3>📤 CSVアップロード</h3><p class="muted">データ投入で即判定</p></div>
+        <div class="card"><h3>🔍 3段階判定</h3><p class="muted">SAFE / WARNING / VIOLATION</p></div>
+        <div class="card"><h3>✉️ 通知文生成</h3><p class="muted">ドライバー/管理者向け</p></div>
+      </div>
+      <div class="screens">
+        <div class="screen">CSV投入画面</div>
+        <div class="screen">判定結果一覧</div>
+        <div class="screen">通知文生成画面</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" style="background:var(--navy-light)">
+    <div class="container">
+      <h2>料金プラン</h2>
+      <div class="card" style="border-color:rgba(0,212,170,.45)">
+        <div class="muted">基本パッケージ（買い切り）</div>
+        <div class="price">¥98,000</div>
+        <ul class="muted" style="margin-left:18px">
+          <li>CSVアップロード＆判定</li>
+          <li>要対応一覧</li>
+          <li>エラー行レポート</li>
+          <li>通知文生成</li>
+        </ul>
+        <div style="margin-top:16px"><a class="btn btn-primary" href="/landing/checkout.html">この内容で購入する</a></div>
+      </div>
+      <div class="grid3" style="margin-top:12px">
+        <div class="card"><h3>会社別CSV変換</h3><p class="muted">+¥50,000 / フォーマット</p></div>
+        <div class="card"><h3>導入サポート</h3><p class="muted">+¥30,000</p></div>
+        <div class="card"><h3>年間保守（任意）</h3><p class="muted">¥36,000 / 年</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="flow">
+    <div class="container">
+      <h2>導入の流れ</h2>
+      <div class="flow">
+        <div class="card"><strong>1. 購入</strong><span class="muted">Stripeで決済</span></div>
+        <div class="card"><strong>2. テンプレ受取</strong><span class="muted">CSVテンプレDL</span></div>
+        <div class="card"><strong>3. データ投入</strong><span class="muted">初回運用確認</span></div>
+        <div class="card"><strong>4. 稼働開始</strong><span class="muted">最短当日開始</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="faq" style="background:var(--navy-light)">
+    <div class="container">
+      <h2>よくある質問</h2>
+      <div class="card"><h3>サブスクですか？</h3><p class="muted">いいえ、買い切りです。</p></div>
+      <div class="card"><h3>デジタコ形式違いは？</h3><p class="muted">+50,000円で変換対応します。</p></div>
+      <div class="card"><h3>返金は？</h3><p class="muted">14日以内・条件付き対応。</p></div>
+      <div class="card"><h3>法改正対応は？</h3><p class="muted">年間保守で対応。</p></div>
+    </div>
+  </section>
+
+  <section class="cta-box">
+    <div class="container">
+      <h2>まずは1社分、今月中に運用開始しませんか？</h2>
+      <p class="sub" style="margin:8px auto 18px">決済後すぐに導入手順とダウンロード案内を受け取れます。</p>
+      <a class="btn btn-primary" href="/landing/checkout.html">今すぐ購入する（Stripe）</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">© 2026 DriveCheck</div>
+  </footer>
+</body>
+</html>

@@ -26,13 +26,14 @@ from .api_models import (
     IngestCsvError,
     IngestCsvResponse,
     LoginRequest,
+    PublicCheckoutRequest,
     SignupRequest,
     TokenResponse,
 )
 from .approval_links import sign as sign_approval_link, verify as verify_approval_link
 from .approvals import create_approval_request, approve_request, execute_approved_action
 from .audit import append_audit_event
-from .billing import create_checkout_session, get_billing_config
+from .billing import create_checkout_session, create_one_time_checkout_session, get_billing_config
 from .auth import (
     create_access_token,
     get_current_context,
@@ -61,6 +62,8 @@ from .rules import analyze
 app = FastAPI(title="Compliance Agent MVP", version="0.4.0")
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 SAMPLES_DIR = Path(__file__).resolve().parent.parent / "samples"
+LANDING_DIR = Path(__file__).resolve().parent.parent / "landing"
+DOWNLOAD_DIR = Path(__file__).resolve().parent.parent / "download"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -69,6 +72,46 @@ def web_index():
     if not index.exists():
         return HTMLResponse("<h1>Compliance Agent</h1><p>web/index.html not found</p>", status_code=200)
     return HTMLResponse(index.read_text(encoding="utf-8"), status_code=200)
+
+
+@app.get("/landing", response_class=HTMLResponse)
+def landing_home():
+    p = LANDING_DIR / "index.html"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="landing page not found")
+    return HTMLResponse(p.read_text(encoding="utf-8"), status_code=200)
+
+
+@app.get("/landing/checkout.html", response_class=HTMLResponse)
+def landing_checkout():
+    p = LANDING_DIR / "checkout.html"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="checkout page not found")
+    return HTMLResponse(p.read_text(encoding="utf-8"), status_code=200)
+
+
+@app.get("/landing/success.html", response_class=HTMLResponse)
+def landing_success():
+    p = LANDING_DIR / "success.html"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="success page not found")
+    return HTMLResponse(p.read_text(encoding="utf-8"), status_code=200)
+
+
+@app.get("/download/drivecheck-local.zip")
+def download_zip():
+    p = DOWNLOAD_DIR / "drivecheck-local.zip"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="release zip not found")
+    return FileResponse(path=str(p), media_type="application/zip", filename="drivecheck-local.zip")
+
+
+@app.get("/download/QUICKSTART.md")
+def download_quickstart():
+    p = DOWNLOAD_DIR / "QUICKSTART.md"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="quickstart not found")
+    return FileResponse(path=str(p), media_type="text/markdown", filename="QUICKSTART.md")
 
 
 @app.get("/health")
@@ -629,6 +672,18 @@ def list_analyses(limit: int = 50, ctx=Depends(get_current_context), db: Session
         }
         for r in rows
     ]
+
+
+@app.post("/v1/public/create-checkout", response_model=BillingCheckoutResponse)
+def public_create_checkout(req: PublicCheckoutRequest):
+    one_time_price_id = os.getenv("STRIPE_ONE_TIME_PRICE_ID")
+    if not one_time_price_id:
+        raise HTTPException(status_code=500, detail="STRIPE_ONE_TIME_PRICE_ID is not configured")
+    try:
+        url = create_one_time_checkout_session(req.email, one_time_price_id, req.success_url, req.cancel_url)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return BillingCheckoutResponse(checkout_url=url)
 
 
 @app.post("/v1/billing/checkout", response_model=BillingCheckoutResponse)
