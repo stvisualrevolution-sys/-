@@ -39,6 +39,7 @@ class IngestCsvResponse(BaseModel):
     imported_rows: int
     analyses_created: int
     failed_rows: int
+    notifications_created: int = 0
     errors: list[IngestCsvError] = Field(default_factory=list)
 
 

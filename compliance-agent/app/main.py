@@ -41,6 +41,7 @@ from .auth import (
 )
 from .db import get_db
 from .emailer import EmailConfigError, send_email
+from .csv_report import build_error_csv
 from .messaging import build_messages
 from .pdf_report import build_signed_report_pdf
 from .settings import owner_email_default
@@ -378,15 +379,8 @@ def analyze_and_notify(req: AnalyzeAndNotifyRequest, ctx=Depends(get_current_con
     return {"analysis": result.model_dump(), "notification": msg.model_dump()}
 
 
-@app.post("/v1/ingest/csv", response_model=IngestCsvResponse)
-async def ingest_csv(
-    file: UploadFile = File(...),
-    ctx=Depends(require_manager_or_owner),
-    db: Session = Depends(get_db),
-):
-    content = (await file.read()).decode("utf-8")
+def _parse_csv_rows(content: str):
     reader = csv.DictReader(StringIO(content))
-
     required_cols = {
         "driver_name",
         "week_violation_over14h_count",
@@ -404,6 +398,17 @@ async def ingest_csv(
                 "received_columns": reader.fieldnames or [],
             },
         )
+    return reader
+
+
+@app.post("/v1/ingest/csv", response_model=IngestCsvResponse)
+async def ingest_csv(
+    file: UploadFile = File(...),
+    ctx=Depends(require_manager_or_owner),
+    db: Session = Depends(get_db),
+):
+    content = (await file.read()).decode("utf-8")
+    reader = _parse_csv_rows(content)
 
     imported = 0
     created = 0
@@ -452,7 +457,125 @@ async def ingest_csv(
         imported_rows=imported,
         analyses_created=created,
         failed_rows=len(errors),
+        notifications_created=0,
         errors=errors[:100],
+    )
+
+
+@app.post("/v1/ingest/csv-analyze-notify", response_model=IngestCsvResponse)
+async def ingest_csv_analyze_notify(
+    file: UploadFile = File(...),
+    ctx=Depends(require_manager_or_owner),
+    db: Session = Depends(get_db),
+):
+    content = (await file.read()).decode("utf-8")
+    reader = _parse_csv_rows(content)
+
+    imported = 0
+    created = 0
+    notified = 0
+    errors: List[IngestCsvError] = []
+
+    for idx, r in enumerate(reader, start=2):
+        imported += 1
+        try:
+            req = AnalyzeAndNotifyRequest(
+                analysis_input={
+                    "driver_name": (r.get("driver_name") or "").strip(),
+                    "week_violation_over14h_count": int(r.get("week_violation_over14h_count", 0)),
+                    "last_shift_end": r.get("last_shift_end") or None,
+                    "two_day_avg_driving_minutes": int(r.get("two_day_avg_driving_minutes", 0)),
+                    "weekly_driving_minutes": int(r.get("weekly_driving_minutes", 0)),
+                    "events": json.loads(r.get("events_json") or "[]"),
+                }
+            )
+            if not req.analysis_input.driver_name:
+                raise ValueError("driver_name is empty")
+
+            result = analyze(req.analysis_input)
+            msg = build_messages(result)
+
+            row = AnalysisLog(
+                tenant_id=ctx["tenant_id"],
+                driver_name=result.driver_name,
+                status=result.status,
+                violation_type=result.violation_type,
+                details=result.details,
+                action_required=result.action_required,
+                evidence_json=json.dumps(result.evidence, ensure_ascii=False),
+            )
+            db.add(row)
+            db.flush()
+            created += 1
+
+            db.add(NotificationLog(tenant_id=ctx["tenant_id"], analysis_id=row.id, target_type="driver", message=msg.driver_message))
+            notified += 1
+            if msg.owner_message:
+                db.add(NotificationLog(tenant_id=ctx["tenant_id"], analysis_id=row.id, target_type="owner", message=msg.owner_message))
+                notified += 1
+                _try_send_owner_email(msg.owner_message)
+
+        except Exception as e:
+            errors.append(IngestCsvError(row_number=idx, reason=str(e)))
+            continue
+
+    append_audit_event(db, ctx["tenant_id"], "ingest.csv_analyze_notify", {
+        "imported_rows": imported,
+        "analyses_created": created,
+        "notifications_created": notified,
+        "failed_rows": len(errors),
+        "filename": file.filename,
+    })
+    db.commit()
+
+    return IngestCsvResponse(
+        imported_rows=imported,
+        analyses_created=created,
+        failed_rows=len(errors),
+        notifications_created=notified,
+        errors=errors[:100],
+    )
+
+
+@app.post("/v1/ingest/csv-errors-report")
+async def ingest_csv_errors_report(
+    file: UploadFile = File(...),
+    ctx=Depends(require_manager_or_owner),
+    db: Session = Depends(get_db),
+):
+    content = (await file.read()).decode("utf-8")
+    reader = _parse_csv_rows(content)
+
+    errors: List[IngestCsvError] = []
+    for idx, r in enumerate(reader, start=2):
+        try:
+            req = AnalyzeAndNotifyRequest(
+                analysis_input={
+                    "driver_name": (r.get("driver_name") or "").strip(),
+                    "week_violation_over14h_count": int(r.get("week_violation_over14h_count", 0)),
+                    "last_shift_end": r.get("last_shift_end") or None,
+                    "two_day_avg_driving_minutes": int(r.get("two_day_avg_driving_minutes", 0)),
+                    "weekly_driving_minutes": int(r.get("weekly_driving_minutes", 0)),
+                    "events": json.loads(r.get("events_json") or "[]"),
+                }
+            )
+            if not req.analysis_input.driver_name:
+                raise ValueError("driver_name is empty")
+            _ = analyze(req.analysis_input)
+        except Exception as e:
+            errors.append(IngestCsvError(row_number=idx, reason=str(e)))
+
+    csv_text = build_error_csv(errors)
+    append_audit_event(db, ctx["tenant_id"], "ingest.csv_errors_report", {
+        "failed_rows": len(errors),
+        "filename": file.filename,
+    })
+    db.commit()
+
+    return Response(
+        content=csv_text,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="ingest-errors.csv"'},
     )
 
 

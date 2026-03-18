@@ -35,7 +35,13 @@ JWT取得後、`Authorization: Bearer <token>` で以下APIを利用。
 運行イベントから法令判定を返します。
 
 ### `POST /v1/ingest/csv`
-CSV一括取り込み。レスポンスに `failed_rows` と `errors`（行番号・理由）を返します。
+CSV一括取り込み（判定のみ）。レスポンスに `failed_rows` と `errors`（行番号・理由）を返します。
+
+### `POST /v1/ingest/csv-analyze-notify`
+CSV一括取り込み（判定 + 通知ログ作成 + WARNING/VIOLATION時メール試行）。
+
+### `POST /v1/ingest/csv-errors-report`
+CSVを検証し、失敗行の `row_number, reason` をCSVでダウンロード。
 
 CSVテンプレート: `samples/ingest_template.csv`
 
