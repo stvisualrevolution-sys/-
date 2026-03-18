@@ -51,7 +51,32 @@
 const out = document.getElementById('out');
 const api = '';
 
-function setOut(v){ out.textContent = typeof v === 'string' ? v : JSON.stringify(v, null, 2); }
+function setOut(v){
+  if (typeof v === 'string') { out.textContent = v; return; }
+  if (v && typeof v === 'object' && Array.isArray(v.alerts)) {
+    const lines = [];
+    lines.push(`取込: ${v.imported_rows}件 / 判定: ${v.analyses_created}件 / 通知: ${v.notifications_created}件 / 失敗: ${v.failed_rows}件`);
+    lines.push('');
+    if (v.alerts.length === 0) {
+      lines.push('⚪ 要対応アラートはありません');
+    } else {
+      lines.push('🚨 要対応アラート一覧');
+      v.alerts.forEach((a, i) => {
+        lines.push(`${i+1}. ${a.driver_name} [${a.status}] ${a.violation_type}`);
+        lines.push(`   内容: ${a.details}`);
+        lines.push(`   対応: ${a.action_required}`);
+      });
+    }
+    if (Array.isArray(v.errors) && v.errors.length) {
+      lines.push('');
+      lines.push('⚠️ CSVエラー');
+      v.errors.forEach(e => lines.push(`- 行${e.row_number}: ${e.reason}`));
+    }
+    out.textContent = lines.join('\n');
+    return;
+  }
+  out.textContent = JSON.stringify(v, null, 2);
+}
 function token(){ return localStorage.getItem('access_token') || ''; }
 
 async function login(){

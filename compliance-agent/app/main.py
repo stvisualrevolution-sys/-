@@ -22,6 +22,7 @@ from .api_models import (
     ApprovalRequestAndSendResponse,
     BillingCheckoutRequest,
     BillingCheckoutResponse,
+    IngestAlert,
     IngestCsvError,
     IngestCsvResponse,
     LoginRequest,
@@ -422,6 +423,7 @@ async def ingest_csv(
     imported = 0
     created = 0
     errors: List[IngestCsvError] = []
+    alerts: List[IngestAlert] = []
 
     for idx, r in enumerate(reader, start=2):  # header is line 1
         imported += 1
@@ -451,6 +453,14 @@ async def ingest_csv(
             )
             db.add(row)
             created += 1
+            if result.status in {"WARNING", "VIOLATION"}:
+                alerts.append(IngestAlert(
+                    driver_name=result.driver_name,
+                    status=result.status,
+                    violation_type=result.violation_type,
+                    details=result.details,
+                    action_required=result.action_required,
+                ))
         except Exception as e:
             errors.append(IngestCsvError(row_number=idx, reason=str(e)))
             continue
@@ -468,6 +478,7 @@ async def ingest_csv(
         failed_rows=len(errors),
         notifications_created=0,
         errors=errors[:100],
+        alerts=alerts[:100],
     )
 
 
@@ -484,6 +495,7 @@ async def ingest_csv_analyze_notify(
     created = 0
     notified = 0
     errors: List[IngestCsvError] = []
+    alerts: List[IngestAlert] = []
 
     for idx, r in enumerate(reader, start=2):
         imported += 1
@@ -503,6 +515,14 @@ async def ingest_csv_analyze_notify(
 
             result = analyze(req.analysis_input)
             msg = build_messages(result)
+            if result.status in {"WARNING", "VIOLATION"}:
+                alerts.append(IngestAlert(
+                    driver_name=result.driver_name,
+                    status=result.status,
+                    violation_type=result.violation_type,
+                    details=result.details,
+                    action_required=result.action_required,
+                ))
 
             row = AnalysisLog(
                 tenant_id=ctx["tenant_id"],
@@ -543,6 +563,7 @@ async def ingest_csv_analyze_notify(
         failed_rows=len(errors),
         notifications_created=notified,
         errors=errors[:100],
+        alerts=alerts[:100],
     )
 
 

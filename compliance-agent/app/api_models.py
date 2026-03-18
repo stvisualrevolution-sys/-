@@ -35,12 +35,21 @@ class IngestCsvError(BaseModel):
     reason: str
 
 
+class IngestAlert(BaseModel):
+    driver_name: str
+    status: str
+    violation_type: str
+    details: str
+    action_required: str
+
+
 class IngestCsvResponse(BaseModel):
     imported_rows: int
     analyses_created: int
     failed_rows: int
     notifications_created: int = 0
     errors: list[IngestCsvError] = Field(default_factory=list)
+    alerts: list[IngestAlert] = Field(default_factory=list)
 
 
 class BillingCheckoutRequest(BaseModel):
