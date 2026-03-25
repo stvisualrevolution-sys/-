@@ -47,7 +47,7 @@ def main():
     rows = completed(preds)[-30:]
     today = datetime.now().strftime('%Y-%m-%d')
     if not rows:
-        text = f"# 日経平均 PDCA 月次レビュー - {today}\n\n- まだ月次集計できるだけの実績データがありません。\n"
+        text = f"# 朝株ラボ 月次レビュー - {today}\n\n- まだ月次集計できるだけの実績データがありません。\n"
         OUT.write_text(text)
         print(str(OUT))
         return
@@ -77,7 +77,7 @@ def main():
     high_conf_text = f"{high_conf_hits}/{len(high_conf)}" if high_conf else 'データ不足'
 
     text = (
-        f"# 日経平均 PDCA 月次レビュー - {today}\n\n"
+        f"# 朝株ラボ 月次レビュー - {today}\n\n"
         f"## サマリー\n"
         f"- 集計対象日数: {total}\n"
         f"- 方向的中数: {direction_hits}/{total}\n"

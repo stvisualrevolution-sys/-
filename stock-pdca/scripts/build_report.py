@@ -97,7 +97,7 @@ def main():
         'reasons': [],
         'falsifier': '未入力'
     }
-    text = f"# 日経平均 朝のPDCA分析 - {datetime.now().strftime('%Y-%m-%d')}\n\n" + render_validation(prev) + "\n" + render_prediction(current, improvements)
+    text = f"# 朝株ラボ 日次レポート - {datetime.now().strftime('%Y-%m-%d')}\n\n" + render_validation(prev) + "\n" + render_prediction(current, improvements)
     OUT.write_text(text)
     print(str(OUT))
 

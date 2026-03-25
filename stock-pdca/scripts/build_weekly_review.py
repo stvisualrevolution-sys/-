@@ -35,7 +35,7 @@ def main():
     rows = recent_completed(preds, 5)
     today = datetime.now().strftime('%Y-%m-%d')
     if not rows:
-        text = f"# 日経平均 PDCA 週次レビュー - {today}\n\n- まだ週次集計できるだけの実績データがありません。\n"
+        text = f"# 朝株ラボ 週次レビュー - {today}\n\n- まだ週次集計できるだけの実績データがありません。\n"
         OUT.write_text(text)
         print(str(OUT))
         return
@@ -64,7 +64,7 @@ def main():
     avg_move_text = 'N/A' if avg_move is None else f"{avg_move:+.2f}%"
 
     text = (
-        f"# 日経平均 PDCA 週次レビュー - {today}\n\n"
+        f"# 朝株ラボ 週次レビュー - {today}\n\n"
         f"## サマリー\n"
         f"- 集計対象日数: {total}\n"
         f"- 方向的中数: {direction_hits}/{total}\n"
