@@ -1,0 +1,19 @@
+[
+  {
+    "date": "2026-03-25",
+    "predicted_direction": "未設定",
+    "predicted_range_pct": [
+      null,
+      null
+    ],
+    "confidence": null,
+    "reasons": [],
+    "falsifier": null,
+    "actual_change_pct": null,
+    "direction_score": null,
+    "range_score": null,
+    "reason_scores": [],
+    "lesson": null,
+    "source_notes": []
+  }
+]

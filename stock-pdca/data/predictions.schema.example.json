@@ -1,0 +1,20 @@
+[
+  {
+    "date": "2026-03-25",
+    "predicted_direction": "下落",
+    "predicted_range_pct": [-0.8, -0.2],
+    "confidence": 61,
+    "reasons": [
+      "米株の軟調地合い",
+      "ドル円の円高圧力",
+      "寄り前先物の弱さ"
+    ],
+    "falsifier": "寄り前に先物が急反発し、ドル円が円安へ戻る場合",
+    "actual_change_pct": null,
+    "direction_score": null,
+    "range_score": null,
+    "reason_scores": [],
+    "lesson": null,
+    "source_notes": []
+  }
+]
