@@ -27,7 +27,10 @@
 - `scripts/` 実行スクリプト
 
 ## 実行
-- 毎朝8:00のcronから `scripts/run_daily_report.sh` を実行
+- 朝予想: 毎朝6:00に `scripts/run_morning_prediction.sh`
+- 引け後レビュー: 毎営業日16:00ごろに `scripts/run_close_review.sh`
+- 週次レビュー: `scripts/run_weekly_review.sh`
+- 月次レビュー: `scripts/run_monthly_review.sh`
 - 必要に応じて手動実行も可能
 
 ## 注意
