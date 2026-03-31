@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-from market_data import fetch_n225_history, classify
+from market_data import fetch_n225_history, classify, fetched_at_jst
 
 BASE = Path(__file__).resolve().parents[1]
 DATA = BASE / 'data'
@@ -38,6 +38,7 @@ def main():
         print(str(OUT))
         return
 
+    fetched_at = fetched_at_jst()
     history = fetch_n225_history()
     date_to_close = {r['date']: r['close'] for r in history}
     if today not in date_to_close:
@@ -85,6 +86,10 @@ def main():
         improvement_why = '横ばい日に方向当てへ寄りすぎると、再現性が下がるため。'
 
     p['lesson'] = ' '.join(lesson) + f" 実績は{change:+.2f}%（{actual_dir}）。"
+    source_note = f"取得時刻: {fetched_at} / 取得元: Yahoo Finance chart API (query1.finance.yahoo.com) / ^N225 {prev_day}->{today}"
+    notes = p.get('source_notes', [])
+    notes.append(source_note)
+    p['source_notes'] = notes[-10:]
     improvements.append({'date': today, 'change': improvement_change, 'why': improvement_why})
 
     save_json(PRED, predictions)
@@ -94,8 +99,9 @@ def main():
         f"# 朝株ラボ 引け後レビュー - {today}\n\n"
         f"## 1. 本日の実績\n- 前営業日終値: {prev_close:.2f}\n- 本日終値: {close:.2f}\n- 騰落率: {change:+.2f}%（{actual_dir}）\n\n"
         f"## 2. 朝予想の検証\n- 予想方向: {p.get('predicted_direction')}\n- 予想レンジ: {low}% ～ {high}%\n- 方向判定: {p['direction_score']}\n- レンジ判定: {p['range_score']}\n\n"
-        f"## 3. 学び\n- {p['lesson']}\n\n"
-        f"## 4. 次回への改善\n- {improvement_change}\n- 理由: {improvement_why}\n"
+        f"## 3. 取得ソースと時刻\n- 取得時刻: {fetched_at}\n- 取得元: Yahoo Finance chart API (query1.finance.yahoo.com)\n- 使用データ: ^N225 前営業日終値と当日終値\n\n"
+        f"## 4. 学び\n- {p['lesson']}\n\n"
+        f"## 5. 次回への改善\n- {improvement_change}\n- 理由: {improvement_why}\n"
     )
     OUT.write_text(text)
     print(str(OUT))

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import time
 import urllib.request
 from datetime import datetime, timezone
 
@@ -35,3 +34,7 @@ def classify(change):
     if change <= -0.3:
         return "下落"
     return "横ばい"
+
+
+def fetched_at_jst():
+    return datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")

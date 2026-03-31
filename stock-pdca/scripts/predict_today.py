@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-from market_data import fetch_n225_history, classify
+from market_data import fetch_n225_history, classify, fetched_at_jst
 
 BASE = Path(__file__).resolve().parents[1]
 DATA = BASE / 'data'
@@ -40,6 +40,7 @@ def fetch_quote(symbol):
 
 
 def build_prediction():
+    fetched_at = fetched_at_jst()
     n225 = fetch_n225_history()
     last_close = n225[-1]['close'] if n225 else None
     prev_close = n225[-2]['close'] if len(n225) >= 2 else None
@@ -95,12 +96,14 @@ def build_prediction():
 
     falsifier = '寄り前の日経先物、ドル円、原油、米株先物のどれかが急変した場合はシナリオを再判定する。'
     source_notes = [x for x in [
-        f"N225 last={last_close}" if last_close else None,
-        f"NKD=F last={nkd}" if nkd else None,
-        f"VIX={vix}" if vix else None,
-        f"WTI={oil}" if oil else None,
-        f"JPY={jpy}" if jpy else None,
-        f"TNX={tnx}" if tnx else None,
+        f"取得時刻: {fetched_at}",
+        "取得元: Yahoo Finance chart API (query1.finance.yahoo.com)",
+        f"N225 (^N225)={last_close}" if last_close else None,
+        f"NKD=F={nkd}" if nkd else None,
+        f"VIX (^VIX)={vix}" if vix else None,
+        f"WTI (CL=F)={oil}" if oil else None,
+        f"JPY=X={jpy}" if jpy else None,
+        f"TNX (^TNX)={tnx}" if tnx else None,
     ] if x]
     return {
         'predicted_direction': direction,
@@ -145,11 +148,13 @@ def main():
         validation = f"## 1. 前回予想の検証\n- 対象日: {prev.get('date')}\n- この詳細検証は引け後16:00レポートで更新します。\n"
 
     reason_text = '\n'.join([f"  {i+1}. {r}" for i, r in enumerate(current['reasons'])])
+    source_notes = '\n'.join([f"- {x}" for x in current.get('source_notes', [])])
     text = (
         f"# 朝株ラボ 朝予想レポート - {today}\n\n"
         + validation + "\n"
         + f"## 2. 本日の予想\n- 方向: {current['predicted_direction']}\n- 予想変動幅: {current['predicted_range_pct'][0]}% ～ {current['predicted_range_pct'][1]}%\n- 確信度: {current['confidence']}\n- 主因トップ5:\n{reason_text}\n- 反証条件:\n  - {current['falsifier']}\n\n"
-        + f"## 3. 直近の改善反映\n{reflected_text}\n"
+        + f"## 3. 取得ソースと時刻\n{source_notes}\n\n"
+        + f"## 4. 直近の改善反映\n{reflected_text}\n"
     )
     OUT.write_text(text)
     print(str(OUT))
